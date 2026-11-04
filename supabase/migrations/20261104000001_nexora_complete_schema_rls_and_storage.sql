@@ -1,9 +1,9 @@
 -- ============================================================================
 -- NEXORA AI 2.0 — MIGRAÇÃO OFICIAL SUPABASE (POSTGRESQL + AUTH + RLS + STORAGE)
+-- Projeto: qtngmvqehbzylvsgwive.supabase.co
 -- ============================================================================
 -- Instruções: Cola este script completo no "SQL Editor" do teu projeto Supabase
--- e clica em "Run" para criar as tabelas, triggers de Auth (200 créditos grátis),
--- políticas de Segurança Row-Level Security (RLS) e Buckets de Storage.
+-- e clica em "Run". O script é 100% idempotente (podes correr várias vezes).
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
@@ -59,7 +59,22 @@ CREATE TABLE IF NOT EXISTS public.projects (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 5. CONTROLO DE VERSÕES ATÓMICO (TIME-MACHINE CHECKPOINTS)
+-- 5. CAPÍTULOS DE E-BOOKS EXTENSOS (10 A 1.000 PÁGINAS)
+CREATE TABLE IF NOT EXISTS public.ebook_chapters (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id UUID NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
+  chapter_number INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  summary TEXT,
+  content TEXT NOT NULL DEFAULT '',
+  word_count INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'COMPLETED',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(project_id, chapter_number)
+);
+
+-- 6. CONTROLO DE VERSÕES ATÓMICO (TIME-MACHINE CHECKPOINTS)
 CREATE TABLE IF NOT EXISTS public.project_versions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id UUID NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
@@ -70,7 +85,7 @@ CREATE TABLE IF NOT EXISTS public.project_versions (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 6. TRANSACTIONAL CREDIT LEDGER (LIVRO-RAZÃO IMUTÁVEL DE CRÉDITOS IA)
+-- 7. TRANSACTIONAL CREDIT LEDGER (LIVRO-RAZÃO IMUTÁVEL DE CRÉDITOS IA)
 CREATE TABLE IF NOT EXISTS public.credit_ledger (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
@@ -84,7 +99,7 @@ CREATE TABLE IF NOT EXISTS public.credit_ledger (
 );
 
 -- ============================================================================
--- 7. TRIGGER AUTOMÁTICO DE ONBOARDING (CRIA USER + ORG + 200 CRÉDITOS GRÁTIS)
+-- 8. TRIGGER AUTOMÁTICO DE ONBOARDING (CRIA USER + ORG + 200 CRÉDITOS GRÁTIS)
 -- ============================================================================
 CREATE OR REPLACE FUNCTION public.handle_new_supabase_user()
 RETURNS TRIGGER
@@ -126,19 +141,22 @@ CREATE TRIGGER on_auth_user_created
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_supabase_user();
 
 -- ============================================================================
--- 8. POLÍTICAS DE SEGURANÇA ROW-LEVEL SECURITY (RLS MULTI-TENANT)
+-- 9. POLÍTICAS DE SEGURANÇA ROW-LEVEL SECURITY (RLS MULTI-TENANT)
 -- ============================================================================
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.organizations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.organization_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ebook_chapters ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.project_versions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.credit_ledger ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Utilizadores podem ver e editar o próprio perfil" ON public.users;
 CREATE POLICY "Utilizadores podem ver e editar o próprio perfil"
   ON public.users FOR ALL
   USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Membros podem aceder às suas organizações" ON public.organizations;
 CREATE POLICY "Membros podem aceder às suas organizações"
   ON public.organizations FOR SELECT
   USING (
@@ -148,6 +166,12 @@ CREATE POLICY "Membros podem aceder às suas organizações"
     )
   );
 
+DROP POLICY IF EXISTS "Membros podem ver os colegas da organização" ON public.organization_members;
+CREATE POLICY "Membros podem ver os colegas da organização"
+  ON public.organization_members FOR SELECT
+  USING (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "Membros podem gerir projetos da sua organização" ON public.projects;
 CREATE POLICY "Membros podem gerir projetos da sua organização"
   ON public.projects FOR ALL
   USING (
@@ -157,8 +181,40 @@ CREATE POLICY "Membros podem gerir projetos da sua organização"
     )
   );
 
+DROP POLICY IF EXISTS "Membros podem gerir capítulos dos seus projetos" ON public.ebook_chapters;
+CREATE POLICY "Membros podem gerir capítulos dos seus projetos"
+  ON public.ebook_chapters FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.projects p
+      JOIN public.organization_members om ON om.organization_id = p.organization_id
+      WHERE p.id = ebook_chapters.project_id AND om.user_id = auth.uid()
+    )
+  );
+
+DROP POLICY IF EXISTS "Membros podem gerir versões dos seus projetos" ON public.project_versions;
+CREATE POLICY "Membros podem gerir versões dos seus projetos"
+  ON public.project_versions FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.projects p
+      JOIN public.organization_members om ON om.organization_id = p.organization_id
+      WHERE p.id = project_versions.project_id AND om.user_id = auth.uid()
+    )
+  );
+
+DROP POLICY IF EXISTS "Membros podem consultar o extrato de créditos da organização" ON public.credit_ledger;
+CREATE POLICY "Membros podem consultar o extrato de créditos da organização"
+  ON public.credit_ledger FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.organization_members om
+      WHERE om.organization_id = credit_ledger.organization_id AND om.user_id = auth.uid()
+    )
+  );
+
 -- ============================================================================
--- 9. SUPABASE STORAGE BUCKETS (CAPAS HD, EXPORTAÇÕES PDF/EPUB/PPTX & ASSETS 8K)
+-- 10. SUPABASE STORAGE BUCKETS (CAPAS HD, EXPORTAÇÕES PDF/EPUB/PPTX & ASSETS 8K)
 -- ============================================================================
 INSERT INTO storage.buckets (id, name, public)
 VALUES
