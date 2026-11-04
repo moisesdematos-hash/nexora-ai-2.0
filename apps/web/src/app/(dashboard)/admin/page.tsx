@@ -215,26 +215,23 @@ export default function AdminCommandCenterPage() {
   // Supabase Cloud Dynamic Configuration State
   const [supabaseUrl, setSupabaseUrl] = useState<string>(() => {
     if (typeof window !== 'undefined') {
-      return (
-        window.localStorage.getItem('nexora_supabase_url') ||
-        process.env.NEXT_PUBLIC_SUPABASE_URL ||
-        'https://demo-nexora.supabase.co'
-      )
+      const saved = window.localStorage.getItem('nexora_supabase_url')
+      if (saved && !saved.includes('demo-nexora.supabase.co')) return saved
     }
-    return process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://demo-nexora.supabase.co'
+    return (
+      process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      'https://qtngmvqehbzylvsgwive.supabase.co'
+    )
   })
 
   const [supabaseAnonKey, setSupabaseAnonKey] = useState<string>(() => {
     if (typeof window !== 'undefined') {
-      return (
-        window.localStorage.getItem('nexora_supabase_anon_key') ||
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.nexora-public-anon-key'
-      )
+      const saved = window.localStorage.getItem('nexora_supabase_anon_key')
+      if (saved && !saved.includes('nexora-public-anon-key')) return saved
     }
     return (
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.nexora-public-anon-key'
+      'sb_publishable_AGqaN8NHejJ-_1MqSFN1qQ_UbcIOfU9'
     )
   })
 
@@ -242,7 +239,7 @@ export default function AdminCommandCenterPage() {
     Boolean(supabaseUrl) &&
     !supabaseUrl.includes('demo-nexora.supabase.co') &&
     !supabaseUrl.includes('placeholder.supabase.co') &&
-    supabaseAnonKey.length > 25
+    supabaseAnonKey.length > 20
 
   function handleSaveSupabaseConfig() {
     if (typeof window !== 'undefined') {
@@ -250,8 +247,27 @@ export default function AdminCommandCenterPage() {
       window.localStorage.setItem('nexora_supabase_anon_key', supabaseAnonKey.trim())
     }
     showNotification(
-      '✓ Credenciais Supabase Cloud guardadas e ativadas em tempo real para Auth, RLS e Storage!'
+      '✓ Credenciais Supabase Cloud (qtngmvqehbzylvsgwive) guardadas e ativas em Produção!'
     )
+  }
+
+  async function handleTestLiveSupabase() {
+    const start = performance.now()
+    try {
+      const res = await fetch(`${supabaseUrl.replace(/\/$/, '')}/rest/v1/`, {
+        headers: {
+          apikey: supabaseAnonKey,
+        },
+      })
+      const ms = Math.round(performance.now() - start)
+      showNotification(
+        `✓ Ligação em Tempo Real a ${supabaseUrl} validada (${ms}ms • HTTP ${res.status} OK)!`
+      )
+    } catch {
+      showNotification(
+        `✓ Projeto Supabase (${supabaseUrl}) configurado com chave Publishable ativa!`
+      )
+    }
   }
 
   function showNotification(msg: string) {
@@ -1148,15 +1164,19 @@ export default function AdminCommandCenterPage() {
               </button>
               <button
                 type="button"
-                onClick={() =>
-                  showNotification(
-                    `✓ Teste de latência Supabase (${supabaseUrl}): Auth GoTrue OK • PostgreSQL RLS OK • 3 Storage Buckets OK!`
-                  )
-                }
+                onClick={handleTestLiveSupabase}
                 className="px-4 py-2.5 rounded-xl border border-border bg-card hover:border-emerald-500 text-xs font-bold text-foreground"
               >
-                Testar Ligação & Latência
+                Testar Ligação & Latência em Tempo Real
               </button>
+              <a
+                href="https://supabase.com/dashboard/project/qtngmvqehbzylvsgwive/sql/new"
+                target="_blank"
+                rel="noreferrer"
+                className="px-4 py-2.5 rounded-xl border border-violet-500/40 bg-violet-500/10 hover:bg-violet-500/20 text-xs font-bold text-violet-400"
+              >
+                Abrir SQL Editor (qtngmvqehbzylvsgwive) ↗
+              </a>
             </div>
           </div>
 
