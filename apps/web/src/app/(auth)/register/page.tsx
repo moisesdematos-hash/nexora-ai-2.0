@@ -2,10 +2,11 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { createClient } from '@/lib/supabase'
+import { createClient, isRealSupabaseConfigured } from '@/lib/supabase'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 
 const registerSchema = z
@@ -23,6 +24,7 @@ const registerSchema = z
 type RegisterForm = z.infer<typeof registerSchema>
 
 export default function RegisterPage() {
+  const router = useRouter()
   const supabase = createClient()
   const [showPw, setShowPw] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
@@ -37,20 +39,38 @@ export default function RegisterPage() {
 
   async function onSubmit(data: RegisterForm) {
     setServerError(null)
-    const { error } = await supabase.auth.signUp({
-      email: data.email,
-      password: data.password,
-      options: { data: { full_name: data.name } },
-    })
-    if (error) {
-      setServerError(error.message)
-      return
+    if (isRealSupabaseConfigured()) {
+      try {
+        const { error } = await supabase.auth.signUp({
+          email: data.email,
+          password: data.password,
+          options: { data: { full_name: data.name } },
+        })
+        if (error) {
+          setServerError(error.message)
+          return
+        }
+        setSuccess(true)
+        return
+      } catch {
+        // Fallback to local studio registration below
+      }
     }
-    setSuccess(true)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(
+        'nexora_local_user',
+        JSON.stringify({ email: data.email, name: data.name, credits: 200 })
+      )
+    }
+    router.push('/dashboard')
   }
 
   async function handleGoogle() {
     setGoogleLoading(true)
+    if (!isRealSupabaseConfigured()) {
+      router.push('/dashboard')
+      return
+    }
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: `${window.location.origin}/auth/callback` },
