@@ -1,0 +1,14 @@
+{
+  "name": "@nexora/config",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Shared configuration for NEXORA AI",
+  "exports": {
+    "./typescript": "./tsconfig.base.json",
+    "./eslint": "./.eslintrc.base.js"
+  },
+  "files": [
+    "tsconfig.base.json",
+    ".eslintrc.base.js"
+  ]
+}

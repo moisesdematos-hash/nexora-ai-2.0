@@ -1,0 +1,28 @@
+{
+  "name": "@nexora/ai",
+  "version": "0.0.1",
+  "private": true,
+  "description": "AI abstraction layer for NEXORA AI",
+  "exports": {
+    ".": "./src/index.ts",
+    "./providers": "./src/providers/index.ts",
+    "./orchestrator": "./src/orchestrator.ts"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "openai": "^4.73.0",
+    "@anthropic-ai/sdk": "^0.32.1",
+    "@google/generative-ai": "^0.21.0",
+    "tiktoken": "^1.0.17",
+    "@nexora/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@nexora/config": "workspace:*",
+    "typescript": "^5.7.2",
+    "rimraf": "^6.0.1"
+  }
+}

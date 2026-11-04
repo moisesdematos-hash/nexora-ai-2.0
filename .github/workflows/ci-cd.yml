@@ -1,0 +1,42 @@
+name: NEXORA AI 2.0 — CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, production]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-verify:
+    name: Build, Typecheck & E2E Studios Verification
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm 9
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Setup Node.js 20 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm --filter @nexora/db prisma generate
+
+      - name: Build Backend (@nexora/api)
+        run: pnpm --filter @nexora/api run build
+
+      - name: Run Master E2E Verification Suite (All 6 Studios + Billing + I18n)
+        run: node apps/api/test/nexora-master-e2e.verify.js
+
+      - name: Build Frontend (@nexora/web)
+        run: pnpm --filter @nexora/web run build

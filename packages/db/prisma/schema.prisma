@@ -1,0 +1,829 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+enum ProjectType {
+  PRESENTATION
+  EBOOK
+  DOCUMENT
+  MINDMAP
+  INFOGRAPHIC
+  WEBSITE
+}
+
+enum PresentationStatus {
+  DRAFT
+  GENERATING
+  READY
+  PUBLISHED
+  ARCHIVED
+}
+
+enum BookStatus {
+  DRAFT
+  OUTLINING
+  GENERATING
+  EDITING
+  READY
+  PUBLISHED
+  ARCHIVED
+}
+
+enum ContentStatus {
+  PENDING
+  GENERATING
+  READY
+  EDITING
+  APPROVED
+}
+
+enum AssetType {
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
+  OTHER
+}
+
+enum ExportFormat {
+  PDF
+  DOCX
+  PPTX
+  HTML
+  MARKDOWN
+  EPUB
+  PNG
+  SVG
+  JSON
+}
+
+enum ExportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum AiJobType {
+  GENERATE_OUTLINE
+  GENERATE_CONTENT
+  GENERATE_SLIDE
+  GENERATE_IMAGE
+  REWRITE
+  TRANSLATE
+  SUMMARIZE
+  EXPAND
+  IMPROVE
+  CUSTOM
+}
+
+enum AiJobStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum AiProvider {
+  OPENAI
+  ANTHROPIC
+  GEMINI
+  REPLICATE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+  INCOMPLETE
+  PAUSED
+}
+
+enum CreditTxType {
+  PURCHASE
+  USAGE
+  REFUND
+  BONUS
+  EXPIRY
+  ADJUSTMENT
+}
+
+enum PlanTier {
+  FREE
+  STARTER
+  PRO
+  ENTERPRISE
+}
+
+// ============================================================
+// USER & AUTH
+// ============================================================
+
+model User {
+  id          String    @id @default(cuid())
+  supabaseId  String    @unique @map("supabase_id")
+  email       String    @unique
+  name        String?
+  avatarUrl   String?   @map("avatar_url")
+  deletedAt   DateTime? @map("deleted_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  profile          Profile?
+  memberships      Membership[]
+  projects         Project[]
+  folders          Folder[]
+  aiJobs           AiJob[]
+  creditTransactions CreditTransaction[]
+  exports          Export[]
+  auditLogs        AuditLog[]
+
+  @@index([email])
+  @@index([supabaseId])
+  @@index([deletedAt])
+  @@map("users")
+}
+
+model Profile {
+  id          String   @id @default(cuid())
+  userId      String   @unique @map("user_id")
+  bio         String?
+  website     String?
+  location    String?
+  language    String   @default("en")
+  timezone    String   @default("UTC")
+  preferences Json     @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+}
+
+// ============================================================
+// ORGANIZATION
+// ============================================================
+
+model Organization {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?
+  logoUrl     String?   @map("logo_url")
+  ownerId     String    @map("owner_id")
+  deletedAt   DateTime? @map("deleted_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  memberships       Membership[]
+  projects          Project[]
+  folders           Folder[]
+  subscriptions     Subscription[]
+  creditTransactions CreditTransaction[]
+  aiJobs            AiJob[]
+  themes            Theme[]
+  auditLogs         AuditLog[]
+
+  @@index([slug])
+  @@index([ownerId])
+  @@index([deletedAt])
+  @@map("organizations")
+}
+
+model Membership {
+  id             String     @id @default(cuid())
+  organizationId String     @map("organization_id")
+  userId         String     @map("user_id")
+  role           MemberRole @default(VIEWER)
+  invitedAt      DateTime?  @map("invited_at")
+  joinedAt       DateTime?  @map("joined_at")
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+  @@map("memberships")
+}
+
+// ============================================================
+// PROJECT
+// ============================================================
+
+model Project {
+  id             String      @id @default(cuid())
+  organizationId String      @map("organization_id")
+  userId         String      @map("user_id")
+  folderId       String?     @map("folder_id")
+  name           String
+  description    String?
+  type           ProjectType
+  thumbnailUrl   String?     @map("thumbnail_url")
+  isPublic       Boolean     @default(false) @map("is_public")
+  tags           String[]    @default([])
+  deletedAt      DateTime?   @map("deleted_at")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder       Folder?         @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  versions     ProjectVersion[]
+  presentation Presentation?
+  book         Book?
+  document     Document?
+  mindMap      MindMap?
+  infographic  Infographic?
+  website      Website?
+  exports      Export[]
+  aiJobs       AiJob[]
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([type])
+  @@index([deletedAt])
+  @@index([createdAt])
+  @@map("projects")
+}
+
+model Folder {
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  userId         String   @map("user_id")
+  parentId       String?  @map("parent_id")
+  name           String
+  color          String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent       Folder?      @relation("FolderChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children     Folder[]     @relation("FolderChildren")
+  projects     Project[]
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([parentId])
+  @@map("folders")
+}
+
+model ProjectVersion {
+  id        String   @id @default(cuid())
+  projectId String   @map("project_id")
+  version   Int
+  title     String
+  snapshot  Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("project_versions")
+}
+
+// ============================================================
+// PRESENTATION
+// ============================================================
+
+model Presentation {
+  id          String             @id @default(cuid())
+  projectId   String             @unique @map("project_id")
+  title       String
+  description String?
+  status      PresentationStatus @default(DRAFT)
+  theme       String?
+  slideCount  Int                @default(0) @map("slide_count")
+  config      Json               @default("{}")
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  slides  Slide[]
+
+  @@index([projectId])
+  @@index([status])
+  @@map("presentations")
+}
+
+model Slide {
+  id             String   @id @default(cuid())
+  presentationId String   @map("presentation_id")
+  position       Int
+  title          String?
+  content        Json     @default("{}")
+  speakerNotes   String?  @map("speaker_notes")
+  thumbnailUrl   String?  @map("thumbnail_url")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  presentation Presentation  @relation(fields: [presentationId], references: [id], onDelete: Cascade)
+  elements     SlideElement[]
+
+  @@index([presentationId])
+  @@index([position])
+  @@map("slides")
+}
+
+model SlideElement {
+  id        String   @id @default(cuid())
+  slideId   String   @map("slide_id")
+  type      String
+  content   Json     @default("{}")
+  position  Json     @default("{}")
+  style     Json     @default("{}")
+  zIndex    Int      @default(0) @map("z_index")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  slide Slide @relation(fields: [slideId], references: [id], onDelete: Cascade)
+
+  @@index([slideId])
+  @@map("slide_elements")
+}
+
+// ============================================================
+// BOOK / EBOOK
+// ============================================================
+
+model Book {
+  id               String     @id @default(cuid())
+  projectId        String     @unique @map("project_id")
+  title            String
+  subtitle         String?
+  description      String?
+  status           BookStatus @default(DRAFT)
+  genre            String?
+  language         String     @default("en")
+  targetWordCount  Int?       @map("target_word_count")
+  currentWordCount Int        @default(0) @map("current_word_count")
+  coverUrl         String?    @map("cover_url")
+  config           Json       @default("{}")
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
+
+  project  Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  outline  BookOutline?
+  parts    BookPart[]
+  chapters BookChapter[]
+  memories BookMemory[]
+  versions BookVersion[]
+  assets   BookAsset[]
+
+  @@index([projectId])
+  @@index([status])
+  @@map("books")
+}
+
+model BookOutline {
+  id        String   @id @default(cuid())
+  bookId    String   @unique @map("book_id")
+  content   Json     @default("{}")
+  approved  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@map("book_outlines")
+}
+
+model BookPart {
+  id        String   @id @default(cuid())
+  bookId    String   @map("book_id")
+  position  Int
+  title     String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  book     Book          @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  chapters BookChapter[]
+
+  @@index([bookId])
+  @@map("book_parts")
+}
+
+model BookChapter {
+  id        String        @id @default(cuid())
+  bookId    String        @map("book_id")
+  partId    String?       @map("part_id")
+  position  Int
+  title     String
+  summary   String?
+  status    ContentStatus @default(PENDING)
+  wordCount Int           @default(0) @map("word_count")
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  book     Book          @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  part     BookPart?     @relation(fields: [partId], references: [id], onDelete: SetNull)
+  sections BookSection[]
+
+  @@index([bookId])
+  @@index([partId])
+  @@map("book_chapters")
+}
+
+model BookSection {
+  id        String        @id @default(cuid())
+  chapterId String        @map("chapter_id")
+  position  Int
+  title     String?
+  content   String        @default("")
+  status    ContentStatus @default(PENDING)
+  wordCount Int           @default(0) @map("word_count")
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  chapter BookChapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@index([chapterId])
+  @@map("book_sections")
+}
+
+model BookMemory {
+  id        String   @id @default(cuid())
+  bookId    String   @map("book_id")
+  key       String
+  value     String
+  embedding Float[]  @default([])
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@index([bookId])
+  @@map("book_memories")
+}
+
+model BookVersion {
+  id        String   @id @default(cuid())
+  bookId    String   @map("book_id")
+  version   Int
+  snapshot  Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@index([bookId])
+  @@map("book_versions")
+}
+
+model BookAsset {
+  id         String    @id @default(cuid())
+  bookId     String    @map("book_id")
+  type       AssetType
+  name       String
+  url        String
+  mimeType   String    @map("mime_type")
+  size       Int       @default(0)
+  metadata   Json      @default("{}")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@index([bookId])
+  @@map("book_assets")
+}
+
+// ============================================================
+// DOCUMENT
+// ============================================================
+
+model Document {
+  id        String   @id @default(cuid())
+  projectId String   @unique @map("project_id")
+  title     String
+  content   Json     @default("{}")
+  wordCount Int      @default(0) @map("word_count")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("documents")
+}
+
+// ============================================================
+// MIND MAP
+// ============================================================
+
+model MindMap {
+  id        String   @id @default(cuid())
+  projectId String   @unique @map("project_id")
+  title     String
+  data      Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("mind_maps")
+}
+
+// ============================================================
+// INFOGRAPHIC
+// ============================================================
+
+model Infographic {
+  id        String   @id @default(cuid())
+  projectId String   @unique @map("project_id")
+  title     String
+  data      Json     @default("{}")
+  width     Int      @default(800)
+  height    Int      @default(1200)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("infographics")
+}
+
+// ============================================================
+// WEBSITE
+// ============================================================
+
+model Website {
+  id         String   @id @default(cuid())
+  projectId  String   @unique @map("project_id")
+  title      String
+  data       Json     @default("{}")
+  publishedUrl String? @map("published_url")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("websites")
+}
+
+// ============================================================
+// EXPORT
+// ============================================================
+
+model Export {
+  id        String       @id @default(cuid())
+  projectId String       @map("project_id")
+  userId    String       @map("user_id")
+  format    ExportFormat
+  status    ExportStatus @default(PENDING)
+  fileUrl   String?      @map("file_url")
+  fileSize  Int?         @map("file_size")
+  error     String?
+  options   Json         @default("{}")
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([userId])
+  @@index([status])
+  @@map("exports")
+}
+
+// ============================================================
+// AI JOBS & USAGE
+// ============================================================
+
+model AiJob {
+  id             String      @id @default(cuid())
+  organizationId String      @map("organization_id")
+  userId         String      @map("user_id")
+  projectId      String?     @map("project_id")
+  type           AiJobType
+  status         AiJobStatus @default(QUEUED)
+  provider       AiProvider
+  model          String
+  prompt         String
+  result         Json?
+  error          String?
+  tokensUsed     Int         @default(0) @map("tokens_used")
+  costUsd        Float       @default(0) @map("cost_usd")
+  metadata       Json        @default("{}")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project      Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([projectId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("ai_jobs")
+}
+
+model AiUsage {
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  userId         String   @map("user_id")
+  month          String
+  provider       AiProvider
+  model          String
+  tokensInput    Int      @default(0) @map("tokens_input")
+  tokensOutput   Int      @default(0) @map("tokens_output")
+  totalCostUsd   Float    @default(0) @map("total_cost_usd")
+  requestCount   Int      @default(0) @map("request_count")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@unique([organizationId, userId, month, provider, model])
+  @@index([organizationId])
+  @@index([userId])
+  @@map("ai_usage")
+}
+
+// ============================================================
+// BILLING & SUBSCRIPTION
+// ============================================================
+
+model Plan {
+  id                    String   @id @default(cuid())
+  name                  String
+  tier                  PlanTier @unique
+  description           String
+  priceMonthly          Int      @map("price_monthly")
+  priceYearly           Int      @map("price_yearly")
+  credits               Int
+  features              String[]
+  limits                Json     @default("{}")
+  stripePriceIdMonthly  String?  @map("stripe_price_id_monthly")
+  stripePriceIdYearly   String?  @map("stripe_price_id_yearly")
+  isActive              Boolean  @default(true) @map("is_active")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+model Subscription {
+  id                  String             @id @default(cuid())
+  organizationId      String             @map("organization_id")
+  planId              String             @map("plan_id")
+  status              SubscriptionStatus @default(TRIALING)
+  stripeSubscriptionId String?           @map("stripe_subscription_id")
+  stripeCustomerId    String?            @map("stripe_customer_id")
+  currentPeriodStart  DateTime           @map("current_period_start")
+  currentPeriodEnd    DateTime           @map("current_period_end")
+  cancelAtPeriodEnd   Boolean            @default(false) @map("cancel_at_period_end")
+  creditsRemaining    Int                @map("credits_remaining")
+  creditsTotal        Int                @map("credits_total")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+
+  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan               Plan                @relation(fields: [planId], references: [id])
+  creditTransactions CreditTransaction[]
+  paymentEvents      PaymentEvent[]
+
+  @@index([organizationId])
+  @@index([status])
+  @@map("subscriptions")
+}
+
+model CreditTransaction {
+  id             String      @id @default(cuid())
+  organizationId String      @map("organization_id")
+  userId         String      @map("user_id")
+  subscriptionId String?     @map("subscription_id")
+  type           CreditTxType
+  amount         Int
+  balanceAfter   Int         @map("balance_after")
+  description    String
+  metadata       Json        @default("{}")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("credit_transactions")
+}
+
+model PaymentEvent {
+  id               String   @id @default(cuid())
+  subscriptionId   String   @map("subscription_id")
+  stripeEventId    String   @unique @map("stripe_event_id")
+  type             String
+  data             Json     @default("{}")
+  processed        Boolean  @default(false)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId])
+  @@map("payment_events")
+}
+
+// ============================================================
+// CUSTOMIZATION
+// ============================================================
+
+model Theme {
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  name           String
+  description    String?
+  config         Json     @default("{}")
+  isDefault      Boolean  @default(false) @map("is_default")
+  previewUrl     String?  @map("preview_url")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("themes")
+}
+
+model Template {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  type        ProjectType
+  thumbnail   String?
+  data        Json        @default("{}")
+  isPublic    Boolean     @default(true) @map("is_public")
+  isPremium   Boolean     @default(false) @map("is_premium")
+  tags        String[]    @default([])
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  @@index([type])
+  @@index([isPublic])
+  @@map("templates")
+}
+
+// ============================================================
+// AUDIT
+// ============================================================
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  userId         String   @map("user_id")
+  action         String
+  entity         String
+  entityId       String   @map("entity_id")
+  oldValues      Json?    @map("old_values")
+  newValues      Json?    @map("new_values")
+  ipAddress      String?  @map("ip_address")
+  userAgent      String?  @map("user_agent")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

@@ -1,0 +1,32 @@
+{
+  "name": "@nexora/db",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Prisma database schema and client for NEXORA AI",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts"
+  },
+  "scripts": {
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "db:seed": "ts-node src/seed.ts",
+    "build": "prisma generate",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.1.0"
+  },
+  "devDependencies": {
+    "@nexora/config": "workspace:*",
+    "prisma": "^6.1.0",
+    "typescript": "^5.7.2",
+    "ts-node": "^10.9.2",
+    "rimraf": "^6.0.1"
+  }
+}

@@ -1,0 +1,82 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: nexora-postgres-prod
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nexora}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nexora_prod_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-nexora_db}
+    volumes:
+      - nexora_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U nexora -d nexora_db']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nexora-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: nexora-redis-prod
+    restart: always
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - nexora_redisdata:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nexora-net
+
+  nexora-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: nexora-api-prod
+    restart: always
+    ports:
+      - '3001:3001'
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-nexora}:${POSTGRES_PASSWORD:-nexora_prod_secret}@postgres:5432/${POSTGRES_DB:-nexora_db}?schema=public
+      REDIS_URL: redis://redis:6379
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - nexora-net
+
+  nexora-web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    container_name: nexora-web-prod
+    restart: always
+    ports:
+      - '3000:3000'
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/api/v1}
+    depends_on:
+      - nexora-api
+    networks:
+      - nexora-net
+
+volumes:
+  nexora_pgdata:
+  nexora_redisdata:
+
+networks:
+  nexora-net:
+    driver: bridge
