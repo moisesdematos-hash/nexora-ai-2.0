@@ -17,6 +17,7 @@ import {
   CreditCard,
   ChevronLeft,
   Sparkles,
+  ShieldAlert,
 } from 'lucide-react'
 
 const navItems = [
@@ -32,6 +33,7 @@ const navItems = [
 ]
 
 const bottomItems = [
+  { name: 'Super-Admin', href: '/admin', icon: ShieldAlert },
   { name: 'Planos & Créditos', href: '/credits', icon: CreditCard },
   { name: 'Definições', href: '/settings', icon: Settings },
 ]
