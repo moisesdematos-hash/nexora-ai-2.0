@@ -13,7 +13,7 @@ export class OrganizationsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.orgsService.findOne(id);
+  findOne(@Req() req: any, @Param('id') id: string) {
+    return this.orgsService.findOne(id, req.user);
   }
 }

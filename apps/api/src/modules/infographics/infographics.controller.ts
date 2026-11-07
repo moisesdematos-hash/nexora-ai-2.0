@@ -6,9 +6,11 @@ import {
   Body,
   Param,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { InfographicsService } from './infographics.service';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
   CreateInfographicDto,
   UpdateInfographicDto,
@@ -16,6 +18,7 @@ import {
 } from './dto/infographics.dto';
 
 @Controller('infographics')
+@UseGuards(SupabaseAuthGuard)
 export class InfographicsController {
   constructor(private readonly infographicsService: InfographicsService) {}
 

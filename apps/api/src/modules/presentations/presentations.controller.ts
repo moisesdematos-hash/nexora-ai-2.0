@@ -7,9 +7,11 @@ import {
   Body,
   Param,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { PresentationsService } from './presentations.service';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
   PlanPresentationDto,
   CreatePresentationDto,
@@ -20,6 +22,7 @@ import {
 } from './dto/presentation.dto';
 
 @Controller('presentations')
+@UseGuards(SupabaseAuthGuard)
 export class PresentationsController {
   constructor(private readonly presentationsService: PresentationsService) {}
 

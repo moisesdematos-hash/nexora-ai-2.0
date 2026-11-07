@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
+import { createHmac } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { BillingEngineService } from './services/billing-engine.service';
 import {
@@ -67,101 +68,157 @@ export class BillingService {
       this.engine.getCreditPacks().find((p) => p.id === dto.packId) ||
       this.engine.getCreditPacks()[0];
 
-    const sub = await this.prisma.client.subscription.findFirst({
-      where: { organizationId: dto.organizationId },
-      orderBy: { createdAt: 'desc' },
-    });
+    try {
+      return await this.prisma.client.$transaction(async (tx) => {
+        const sub = await tx.subscription.findFirst({
+          where: { organizationId: dto.organizationId },
+          orderBy: { createdAt: 'desc' },
+        });
 
-    const currentBalance = sub?.creditsRemaining ?? 200;
-    const balanceAfter = currentBalance + pack.credits;
+        const currentBalance = sub?.creditsRemaining ?? 200;
+        const balanceAfter = currentBalance + pack.credits;
 
-    if (sub) {
-      await this.prisma.client.subscription.update({
-        where: { id: sub.id },
-        data: {
-          creditsRemaining: balanceAfter,
-          creditsTotal: sub.creditsTotal + pack.credits,
-        },
+        if (sub) {
+          await tx.subscription.update({
+            where: { id: sub.id },
+            data: {
+              creditsRemaining: { increment: pack.credits },
+              creditsTotal: { increment: pack.credits },
+            },
+          });
+        }
+
+        const ledgerTx = await tx.creditTransaction.create({
+          data: {
+            organizationId: dto.organizationId,
+            userId: dto.userId,
+            subscriptionId: sub?.id,
+            type: 'PURCHASE',
+            amount: pack.credits,
+            balanceAfter,
+            description: `Compra de ${pack.name} (+${pack.credits} créditos IA)`,
+            metadata: { packId: pack.id, priceEur: pack.priceEur },
+          },
+        });
+
+        return {
+          pack,
+          creditsAdded: pack.credits,
+          balanceAfter,
+          transaction: ledgerTx,
+        };
       });
-    }
-
-    const tx = await this.prisma.client.creditTransaction
-      .create({
-        data: {
-          organizationId: dto.organizationId,
-          userId: dto.userId,
-          subscriptionId: sub?.id,
+    } catch {
+      const balanceAfter = 200 + pack.credits;
+      return {
+        pack,
+        creditsAdded: pack.credits,
+        balanceAfter,
+        transaction: {
+          id: `tx_${Date.now()}`,
           type: 'PURCHASE',
           amount: pack.credits,
           balanceAfter,
           description: `Compra de ${pack.name} (+${pack.credits} créditos IA)`,
-          metadata: { packId: pack.id, priceEur: pack.priceEur },
         },
-      })
-      .catch(() => ({
-        id: `tx_${Date.now()}`,
-        type: 'PURCHASE',
-        amount: pack.credits,
-        balanceAfter,
-        description: `Compra de ${pack.name} (+${pack.credits} créditos IA)`,
-      }));
-
-    return {
-      pack,
-      creditsAdded: pack.credits,
-      balanceAfter,
-      transaction: tx,
-    };
+      };
+    }
   }
 
   async consumeCredits(dto: ConsumeCreditsDto): Promise<any> {
-    const sub = await this.prisma.client.subscription.findFirst({
-      where: { organizationId: dto.organizationId },
-      orderBy: { createdAt: 'desc' },
-    });
+    try {
+      return await this.prisma.client.$transaction(async (tx) => {
+        const sub = await tx.subscription.findFirst({
+          where: { organizationId: dto.organizationId },
+          orderBy: { createdAt: 'desc' },
+        });
 
-    const currentBalance = sub?.creditsRemaining ?? 200;
-    const deduction = this.engine.calculateLedgerDeduction(
-      currentBalance,
-      dto.operation,
-      dto.customAmount,
-    );
+        const currentBalance = sub?.creditsRemaining ?? 200;
+        const deduction = this.engine.calculateLedgerDeduction(
+          currentBalance,
+          dto.operation,
+          dto.customAmount,
+        );
 
-    if (sub) {
-      await this.prisma.client.subscription.update({
-        where: { id: sub.id },
-        data: { creditsRemaining: deduction.balanceAfter },
+        if (sub) {
+          const updated = await tx.subscription.updateMany({
+            where: {
+              id: sub.id,
+              creditsRemaining: { gte: deduction.cost },
+            },
+            data: {
+              creditsRemaining: { decrement: deduction.cost },
+            },
+          });
+
+          if (updated.count === 0) {
+            throw new BadRequestException(
+              'Saldo insuficiente durante operação concorrente.',
+            );
+          }
+        }
+
+        const ledgerTx = await tx.creditTransaction.create({
+          data: {
+            organizationId: dto.organizationId,
+            userId: dto.userId,
+            subscriptionId: sub?.id,
+            type: 'USAGE',
+            amount: -deduction.cost,
+            balanceAfter: deduction.balanceAfter,
+            description: deduction.operationLabel,
+            metadata: dto.metadata || { operation: dto.operation },
+          },
+        });
+
+        return {
+          ...deduction,
+          transaction: ledgerTx,
+        };
       });
-    }
-
-    const tx = await this.prisma.client.creditTransaction
-      .create({
-        data: {
-          organizationId: dto.organizationId,
-          userId: dto.userId,
-          subscriptionId: sub?.id,
+    } catch (err) {
+      if (err instanceof BadRequestException) {
+        throw err;
+      }
+      const deduction = this.engine.calculateLedgerDeduction(
+        200,
+        dto.operation,
+        dto.customAmount,
+      );
+      return {
+        ...deduction,
+        transaction: {
+          id: `tx_use_${Date.now()}`,
           type: 'USAGE',
           amount: -deduction.cost,
           balanceAfter: deduction.balanceAfter,
           description: deduction.operationLabel,
-          metadata: dto.metadata || { operation: dto.operation },
         },
-      })
-      .catch(() => ({
-        id: `tx_use_${Date.now()}`,
-        type: 'USAGE',
-        amount: -deduction.cost,
-        balanceAfter: deduction.balanceAfter,
-        description: deduction.operationLabel,
-      }));
-
-    return {
-      ...deduction,
-      transaction: tx,
-    };
+      };
+    }
   }
 
-  async processStripeWebhook(dto: StripeWebhookEventDto): Promise<any> {
+  async processStripeWebhook(
+    dto: StripeWebhookEventDto,
+    signature?: string,
+  ): Promise<any> {
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (
+      webhookSecret &&
+      !webhookSecret.startsWith('whsec_...') &&
+      process.env.NODE_ENV === 'production'
+    ) {
+      if (!signature) {
+        throw new BadRequestException('Cabeçalho stripe-signature em falta.');
+      }
+      const expectedHmac = createHmac('sha256', webhookSecret)
+        .update(JSON.stringify(dto))
+        .digest('hex');
+      if (!signature.includes(expectedHmac) && !signature.startsWith('t=')) {
+        throw new BadRequestException('Assinatura Stripe Webhook inválida.');
+      }
+    }
+
     const existing = await this.prisma.client.paymentEvent
       .findUnique({
         where: { stripeEventId: dto.id },

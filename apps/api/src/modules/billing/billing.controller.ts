@@ -5,8 +5,11 @@ import {
   Body,
   Param,
   Query,
+  Headers,
+  UseGuards,
 } from '@nestjs/common';
 import { BillingService } from './billing.service';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
   CreateCheckoutSessionDto,
   PurchaseCreditPackDto,
@@ -29,6 +32,7 @@ export class BillingController {
   }
 
   @Get('organization/:organizationId')
+  @UseGuards(SupabaseAuthGuard)
   getOrganizationSummary(
     @Param('organizationId') organizationId: string,
   ): Promise<any> {
@@ -36,22 +40,28 @@ export class BillingController {
   }
 
   @Post('checkout')
+  @UseGuards(SupabaseAuthGuard)
   createCheckoutSession(@Body() dto: CreateCheckoutSessionDto): Promise<any> {
     return this.billingService.createCheckoutSession(dto);
   }
 
   @Post('credit-packs/purchase')
+  @UseGuards(SupabaseAuthGuard)
   purchaseCreditPack(@Body() dto: PurchaseCreditPackDto): Promise<any> {
     return this.billingService.purchaseCreditPack(dto);
   }
 
   @Post('credits/consume')
+  @UseGuards(SupabaseAuthGuard)
   consumeCredits(@Body() dto: ConsumeCreditsDto): Promise<any> {
     return this.billingService.consumeCredits(dto);
   }
 
   @Post('webhooks/stripe')
-  handleStripeWebhook(@Body() dto: StripeWebhookEventDto): Promise<any> {
-    return this.billingService.processStripeWebhook(dto);
+  handleStripeWebhook(
+    @Body() dto: StripeWebhookEventDto,
+    @Headers('stripe-signature') signature?: string,
+  ): Promise<any> {
+    return this.billingService.processStripeWebhook(dto, signature);
   }
 }

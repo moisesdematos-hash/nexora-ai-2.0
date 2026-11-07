@@ -27,24 +27,29 @@ export class ProjectsController {
 
   @Get()
   findAll(
+    @Req() req: any,
     @Query('organizationId') organizationId: string,
     @Query('search') search?: string,
   ) {
-    return this.projectsService.findAll(organizationId, search);
+    return this.projectsService.findAll(organizationId, search, req.user);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.projectsService.findOne(id);
+  findOne(@Req() req: any, @Param('id') id: string) {
+    return this.projectsService.findOne(id, req.user);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateProjectDto) {
-    return this.projectsService.update(id, dto);
+  update(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() dto: UpdateProjectDto,
+  ) {
+    return this.projectsService.update(id, dto, req.user);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.projectsService.remove(id);
+  remove(@Req() req: any, @Param('id') id: string) {
+    return this.projectsService.remove(id, req.user);
   }
 }

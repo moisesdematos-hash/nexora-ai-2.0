@@ -3,7 +3,6 @@
 import React, { useState } from 'react'
 import Link from 'next/link'
 import {
-  ShieldAlert,
   Users,
   CreditCard,
   Cpu,
@@ -13,20 +12,14 @@ import {
   Database,
   TrendingUp,
   DollarSign,
-  Zap,
   Search,
-  Plus,
   CheckCircle2,
-  AlertTriangle,
   RefreshCw,
-  Ban,
   ArrowUpRight,
   Server,
   Layers,
-  Terminal,
   Download,
   Bell,
-  Key,
   Sparkles,
 } from 'lucide-react'
 
@@ -218,10 +211,7 @@ export default function AdminCommandCenterPage() {
       const saved = window.localStorage.getItem('nexora_supabase_url')
       if (saved && !saved.includes('demo-nexora.supabase.co')) return saved
     }
-    return (
-      process.env.NEXT_PUBLIC_SUPABASE_URL ||
-      'https://qtngmvqehbzylvsgwive.supabase.co'
-    )
+    return process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://demo-nexora.supabase.co'
   })
 
   const [supabaseAnonKey, setSupabaseAnonKey] = useState<string>(() => {
@@ -229,10 +219,7 @@ export default function AdminCommandCenterPage() {
       const saved = window.localStorage.getItem('nexora_supabase_anon_key')
       if (saved && !saved.includes('nexora-public-anon-key')) return saved
     }
-    return (
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-      'sb_publishable_AGqaN8NHejJ-_1MqSFN1qQ_UbcIOfU9'
-    )
+    return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
   })
 
   const isLiveSupabase =
@@ -247,11 +234,9 @@ export default function AdminCommandCenterPage() {
       window.localStorage.setItem('nexora_supabase_anon_key', supabaseAnonKey.trim())
     }
     showNotification(
-      '✓ Credenciais Supabase Cloud (qtngmvqehbzylvsgwive) guardadas e ativas em Produção!'
+      '✓ Credenciais Supabase Cloud guardadas e ativas em Produção!'
     )
   }
-
-  const [schemaVerified, setSchemaVerified] = useState<boolean>(true)
 
   async function handleTestLiveSupabase() {
     const start = performance.now()
@@ -267,7 +252,6 @@ export default function AdminCommandCenterPage() {
       ])
       const ms = Math.round(performance.now() - start)
       if (projectsRes.ok || restRes.ok) {
-        setSchemaVerified(true)
         showNotification(
           `✓ Supabase Cloud (${baseUrl}) 100% Operacional! Tabelas SQL, RLS & Storage verificados em ${ms}ms (HTTP ${projectsRes.status}).`
         )
@@ -375,8 +359,12 @@ export default function AdminCommandCenterPage() {
           </div>
         </div>
 
-        {/* 8 Admin Navigation Tabs */}
-        <div className="flex flex-wrap gap-2 mt-6 pt-5 border-t border-white/10">
+        {/* 9 Admin Navigation Tabs */}
+        <div
+          role="tablist"
+          aria-label="Módulos do Centro de Comando Super-Admin"
+          className="flex flex-wrap gap-2 mt-6 pt-5 border-t border-white/10"
+        >
           {[
             { id: 'overview' as AdminTab, label: '1. Visão Executiva & MRR', icon: TrendingUp },
             { id: 'users' as AdminTab, label: '2. Utilizadores & Tenants', icon: Users },
@@ -394,6 +382,8 @@ export default function AdminCommandCenterPage() {
               <button
                 key={tab.id}
                 type="button"
+                role="tab"
+                aria-selected={active}
                 onClick={() => setActiveTab(tab.id)}
                 className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
                   active
@@ -1042,6 +1032,8 @@ export default function AdminCommandCenterPage() {
                 </div>
                 <button
                   type="button"
+                  role="switch"
+                  aria-checked={flag.enabled}
                   onClick={() => {
                     const next = [...featureFlags]
                     next[idx].enabled = !next[idx].enabled

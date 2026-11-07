@@ -6,7 +6,6 @@ import {
   Brain,
   BarChart3,
   Globe,
-  Plus,
   Clock,
   Sparkles,
   TrendingUp,

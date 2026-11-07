@@ -6,9 +6,11 @@ import {
   Body,
   Param,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { WebsitesService } from './websites.service';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
   CreateWebsiteDto,
   UpdateWebsiteDto,
@@ -17,6 +19,7 @@ import {
 } from './dto/websites.dto';
 
 @Controller('websites')
+@UseGuards(SupabaseAuthGuard)
 export class WebsitesController {
   constructor(private readonly websitesService: WebsitesService) {}
 

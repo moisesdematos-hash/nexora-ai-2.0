@@ -26,7 +26,7 @@ import {
 import { EbookEditor } from '@/components/ebooks/EbookEditor'
 import { FuturisticReader, ReadingModelId } from '@/components/ebooks/FuturisticReader'
 import { NexoraQuantumSuite } from '@/components/nexora-quantum/NexoraQuantumSuite'
-import { buildCoverSvgDataUrl } from '../new/page'
+import { buildCoverSvgDataUrl } from '@/lib/ebook-cover-svg'
 
 const COVER_STYLES = [
   { id: 'CORPORATE_EXECUTIVE', name: 'Executivo Corporativo', color: 'bg-slate-900 text-sky-400' },

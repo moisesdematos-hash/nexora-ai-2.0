@@ -6,9 +6,11 @@ import {
   Body,
   Param,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { EbooksService } from './ebooks.service';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
   GenerateOutlineDto,
   CreateBookDto,
@@ -18,6 +20,7 @@ import {
 } from './dto/ebook.dto';
 
 @Controller('ebooks')
+@UseGuards(SupabaseAuthGuard)
 export class EbooksController {
   constructor(private readonly ebooksService: EbooksService) {}
 

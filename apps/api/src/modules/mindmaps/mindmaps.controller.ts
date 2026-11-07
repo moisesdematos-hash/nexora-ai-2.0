@@ -6,9 +6,11 @@ import {
   Body,
   Param,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { MindMapsService } from './mindmaps.service';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
   CreateMindMapDto,
   UpdateMindMapDto,
@@ -17,6 +19,7 @@ import {
 } from './dto/mindmaps.dto';
 
 @Controller('mindmaps')
+@UseGuards(SupabaseAuthGuard)
 export class MindMapsController {
   constructor(private readonly mindMapsService: MindMapsService) {}
 

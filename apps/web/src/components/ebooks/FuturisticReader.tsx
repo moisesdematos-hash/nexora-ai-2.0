@@ -3,21 +3,14 @@
 import React, { useState, useEffect } from 'react'
 import {
   Sparkles,
-  Eye,
   Zap,
   Columns,
-  FileText,
   Volume2,
   VolumeX,
   ChevronLeft,
   ChevronRight,
   Maximize2,
   Minimize2,
-  Cpu,
-  BookOpen,
-  Layers,
-  Terminal,
-  Sun,
   Image as ImageIcon,
   Wand2,
 } from 'lucide-react'

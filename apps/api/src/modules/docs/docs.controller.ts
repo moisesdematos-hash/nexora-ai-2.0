@@ -6,9 +6,11 @@ import {
   Body,
   Param,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { DocsService } from './docs.service';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
   CreateDocumentDto,
   UpdateDocumentDto,
@@ -16,6 +18,7 @@ import {
 } from './dto/docs.dto';
 
 @Controller('docs')
+@UseGuards(SupabaseAuthGuard)
 export class DocsController {
   constructor(private readonly docsService: DocsService) {}
 
