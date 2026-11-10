@@ -16,6 +16,16 @@ const PROTECTED_PREFIXES = [
 ]
 
 export async function middleware(request: NextRequest) {
+  // Se receber um código OAuth na raiz ou outra página, encaminhar para /auth/callback
+  const code = request.nextUrl.searchParams.get('code')
+  if (code && !request.nextUrl.pathname.startsWith('/auth/callback')) {
+    const callbackUrl = new URL('/auth/callback', request.url)
+    request.nextUrl.searchParams.forEach((value, key) => {
+      callbackUrl.searchParams.set(key, value)
+    })
+    return NextResponse.redirect(callbackUrl)
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   })
