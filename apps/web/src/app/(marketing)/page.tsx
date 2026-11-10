@@ -61,7 +61,7 @@ const COPY: Record<
   pt: {
     badge: 'NEXORA AI 2.0 • Plataforma SaaS Enterprise de Criação Multimodal',
     heroTitle1: 'Transforma ideias em ',
-    heroTitleHighlight: 'apresentações, e-books de 500 páginas e websites',
+    heroTitleHighlight: 'apresentações, e-books de 10 a 500 páginas e websites',
     heroTitle2: ' com IA',
     heroSub:
       'Seis estúdios criativos integrados num único ecossistema: Apresentações 16:9, E-books longos com memória editorial persistente, Documentos Executivos, Mapas Mentais, Infográficos e Landing Pages.',
@@ -83,7 +83,7 @@ const COPY: Record<
   en: {
     badge: 'NEXORA AI 2.0 • Enterprise Multimodal AI Creation SaaS',
     heroTitle1: 'Turn ideas into ',
-    heroTitleHighlight: 'presentations, 500-page e-books & websites',
+    heroTitleHighlight: 'presentations, 10 to 500-page e-books & websites',
     heroTitle2: ' with AI',
     heroSub:
       'Six integrated creative studios in one platform: 16:9 Presentations, Longform E-books with persistent memory, Executive Docs, Mind Maps, Infographics, and Landing Pages.',
@@ -104,7 +104,7 @@ const COPY: Record<
   es: {
     badge: 'NEXORA AI 2.0 • Plataforma SaaS Enterprise de Creación Multimodal',
     heroTitle1: 'Transforma ideas en ',
-    heroTitleHighlight: 'presentaciones, e-books de 500 páginas y sitios web',
+    heroTitleHighlight: 'presentaciones, e-books de 10 a 500 páginas y sitios web',
     heroTitle2: ' con IA',
     heroSub:
       'Seis estudios creativos integrados: Presentaciones 16:9, E-books extensos con memoria editorial, Documentos Ejecutivos, Mapas Mentales, Infografías y Landing Pages.',
@@ -126,7 +126,7 @@ const COPY: Record<
   fr: {
     badge: 'NEXORA AI 2.0 • Plateforme SaaS Enterprise de Création Multimodale',
     heroTitle1: 'Transformez vos idées en ',
-    heroTitleHighlight: 'présentations, e-books de 500 pages et sites web',
+    heroTitleHighlight: 'présentations, e-books de 10 à 500 pages et sites web',
     heroTitle2: " avec l'IA",
     heroSub:
       'Six studios créatifs intégrés : Présentations 16:9, E-books longs avec mémoire éditoriale, Documents Exécutifs, Cartes Mentales, Infographies et Landing Pages.',
@@ -454,7 +454,7 @@ export default function HomePage() {
               6 Estúdios
             </a>
             <a href="#longform" className="hover:text-foreground transition-colors">
-              Motor 500p
+              Motor 10–500p
             </a>
             <a href="#comparison" className="hover:text-foreground transition-colors">
               Comparativo
@@ -1575,7 +1575,7 @@ export default function HomePage() {
             Pronto para criar na Área de Produção da NEXORA AI 2.0?
           </h2>
           <p className="text-base sm:text-lg text-indigo-100 max-w-2xl mx-auto">
-            Acede imediatamente aos 6 estúdios criativos, 20 layouts de apresentações, motor de e-books de 500 páginas e exportação multi-formato.
+            Acede imediatamente aos 6 estúdios criativos, 20 layouts de apresentações, motor de e-books de 10 a 500 páginas e exportação multi-formato.
           </p>
           <div className="flex flex-wrap justify-center gap-4 pt-2">
             <Link
@@ -1636,7 +1636,7 @@ export default function HomePage() {
                 </li>
                 <li>
                   <Link href="/ebooks/new" className="hover:text-foreground transition-colors">
-                    NEXORA Ebook Studio (500p+)
+                    NEXORA Ebook Studio (10–500p)
                   </Link>
                 </li>
                 <li>

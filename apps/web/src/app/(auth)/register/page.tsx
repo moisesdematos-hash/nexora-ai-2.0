@@ -67,16 +67,29 @@ export default function RegisterPage() {
 
   async function handleGoogle() {
     setGoogleLoading(true)
-    if (!isRealSupabaseConfigured()) {
-      router.push('/dashboard')
-      return
-    }
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
-    })
-    if (error) {
-      setServerError('Erro ao registar com Google.')
+    setServerError(null)
+    try {
+      if (!isRealSupabaseConfigured()) {
+        router.push('/dashboard')
+        return
+      }
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+      if (error) {
+        setServerError(error.message || 'Erro ao registar com Google.')
+        setGoogleLoading(false)
+        return
+      }
+      if (data?.url) {
+        window.location.href = data.url
+      }
+    } catch (err: any) {
+      console.error('Erro Google OAuth:', err)
+      setServerError(err?.message || 'Erro inesperado na comunicação com o Google.')
       setGoogleLoading(false)
     }
   }
